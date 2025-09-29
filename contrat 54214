@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Générateur de contrat de test — Stelneo</title>
+  <style>
+    :root{
+      --bg:#F4EEDF; --ink:#0a2a3a; --muted:#5b7280; --accent:#f6c13c; --card:#ffffff; --border:#d8d5c9;
+      --radius:14px; --shadow:0 8px 24px rgba(10,42,58,.12);
+    }
+    html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    .app{display:grid;grid-template-columns:420px 1fr;min-height:100vh}
+    aside{border-right:1px solid var(--border);background:linear-gradient(180deg,rgba(255,255,255,.8),rgba(255,255,255,.6));backdrop-filter:saturate(1.1) blur(2px)}
+    .pad{padding:20px}
+    h1{font-size:22px;letter-spacing:.2px;margin:8px 0 2px}
+    .subtitle{color:var(--muted);font-size:13px;margin:0 0 16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px;margin:10px 0}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    input,select,textarea{width:100%;box-sizing:border-box;border:1px solid var(--border);border-radius:12px;padding:10px 12px;font-size:14px;background:#fff;color:var(--ink);outline:none}
+    textarea{min-height:90px;resize:vertical}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+    .muted{color:var(--muted);font-size:12px}
+    .btn{display:inline-flex;align-items:center;gap:8px;border:none;border-radius:12px;padding:10px 12px;background:var(--ink);color:#fff;font-weight:600;cursor:pointer}
+    .btn.secondary{background:#fff;color:var(--ink);border:1px solid var(--border)}
+    .btn.accent{background:var(--accent);color:#2b2200}
+    .stack{display:flex;flex-wrap:wrap;gap:8px}
+    .toolbar{position:sticky;top:0;z-index:5;background:linear-gradient(180deg,rgba(244,238,223,.9),rgba(244,238,223,.7));backdrop-filter:blur(6px);padding:10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+    .preview{padding:24px 30px 60px}
+
+    /* Document look & feel ("vrai contrat") */
+    .doc{background:#fff;border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:30mm 25mm;max-width:900px;margin:10px auto;line-height:1.6;font-size:12.5pt;text-align:justify}
+    .doc h2{margin:0 0 2mm;font-size:13pt;letter-spacing:.3px;text-transform:uppercase}
+    .doc h3{margin:16px 0 6px;font-size:12.5pt;text-transform:uppercase}
+    .doc p{margin:6px 0}
+    .doc .center{text-align:center}
+    .doc .sep{height:1px;background:var(--border);margin:10px 0}
+    .doc .small{font-size:10.5pt;color:#384b57}
+    .doc .caps{font-variant:small-caps}
+    .article{counter-increment:art}
+    .article h3::before{content:"Article " counter(art) " — ";}
+
+    /* Signature blocks */
+    .sign-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:18px;align-items:start}
+    .sign{border:1px dashed var(--border);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;overflow:visible;break-inside:avoid;page-break-inside:avoid}
+
+    /* Print only the document */
+    @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+    @media print {
+      .print-footer{display:block !important}
+      body{background:#fff}
+      .app{display:block}
+      aside, .toolbar{display:none !important}
+      .preview{padding:0}
+      .doc{border:none;box-shadow:none;border-radius:0;max-width:unset;width:auto;padding:0;margin:0}
+      .print-footer{position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:10pt;color:#6b7c88}
+      .no-print{display:none !important}
+    }
+    .print-footer{display:none}
+    .hidden{display:none}
+    .badge{display:inline-block;background:#fff;border:1px dashed var(--border);padding:4px 8px;border-radius:999px;font-size:11px;color:var(--muted)}
+
+    /* Electronic signature styling */
+    .esign{margin-top:6px}
+    .esign svg{width:100%;height:auto;max-width:480px;display:block}
+    .esign .esign-meta{font-size:10pt;color:#384b57;margin-top:6px}
+    .sign p{margin:0;line-height:1.4}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="pad">
+        <h1>Générateur de contrat</h1>
+        <p class="subtitle">Créer et exporter rapidement un contrat de test (PDF n'imprime que le texte du contrat).</p>
+
+        <div class="card">
+          <label>Type de contact</label>
+          <div class="stack" role="radiogroup" aria-label="Type de contact">
+            <button class="btn secondary" data-radio="contactType" data-value="pro">Professionnel</button>
+            <button class="btn secondary" data-radio="contactType" data-value="perso">Particulier</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <label>Signataire Stelneo (automatique)</label>
+          <div class="stack" role="radiogroup" aria-label="Signataire Stelneo">
+            <button class="btn secondary" data-radio="signer" data-value="Léo-Paul BRIATTE">Léo‑Paul BRIATTE</button>
+            <button class="btn secondary" data-radio="signer" data-value="Vianney Dubourg">Vianney Dubourg</button>
+          </div>
+        </div>
+
+        <div id="proFields" class="card hidden">
+          <div class="row">
+            <div>
+              <label>Raison sociale</label>
+              <input id="proCompany" placeholder="Ex. ACME SAS" />
+            </div>
+            <div>
+              <label>N° SIRET (optionnel)</label>
+              <input id="proSiret" placeholder="Ex. 123 456 789 00012" />
+            </div>
+          </div>
+          <div class="row">
+            <div>
+              <label>Nom & prénom du représentant</label>
+              <input id="proName" placeholder="Ex. Marie Martin" />
+            </div>
+            <div>
+              <label>Fonction</label>
+              <input id="proRole" placeholder="Ex. Responsable logistique" />
+            </div>
+          </div>
+          <div>
+            <label>Adresse (optionnel)</label>
+            <textarea id="proAddress" placeholder="Adresse complète"></textarea>
+          </div>
+        </div>
+
+        <div id="persoFields" class="card hidden">
+          <div>
+            <label>Nom & prénom</label>
+            <input id="persoName" placeholder="Ex. Jean Dupont" />
+          </div>
+          <div>
+            <label>Adresse (optionnel)</label>
+            <textarea id="persoAddress" placeholder="Adresse complète"></textarea>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div>
+              <label>Ville de signature</label>
+              <input id="place" placeholder="Ex. Bordeaux" />
+            </div>
+            <div>
+              <label>Date</label>
+              <div class="row">
+                <input id="date" placeholder="Ex. 25 septembre 2025" />
+                <button class="btn secondary" id="btnToday" title="Insérer la date du jour">Aujourd'hui</button>
+              </div>
+            </div>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <div>
+              <label>Nombre de pochettes</label>
+              <input id="qty" type="number" min="1" value="1" />
+            </div>
+            <div>
+              <label>Durée du test (mois)</label>
+              <input id="months" type="number" min="1" value="1" />
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <label>Clauses additionnelles (optionnel)</label>
+          <textarea id="customClauses" placeholder="Ajoutez ici des précisions ou clauses spécifiques (optionnel)"></textarea>
+        </div>
+
+        <div class="card">
+          <div class="stack">
+            <button class="btn accent" id="btnGenerate">Générer</button>
+            <button class="btn secondary" id="btnCopy">Copier</button>
+            <button class="btn secondary" id="btnPrint">Exporter en PDF</button>
+            <button class="btn secondary" id="btnSave">Enregistrer</button>
+            <button class="btn secondary" id="btnLoad">Recharger</button>
+            <button class="btn secondary" id="btnTests" title="Exécuter des tests de base">Exécuter tests</button>
+          </div>
+          <p class="muted">⚠️ Modèle indicatif. Pour un usage juridique engageant, faites valider par un conseil.</p>
+          <div id="testsOut" class="muted"></div>
+        </div>
+
+      </div>
+    </aside>
+
+    <main>
+      <div class="toolbar">
+        <span class="badge" id="badgeType">Type : non défini</span>
+        <span class="badge" id="badgeSigner">Signataire : non défini</span>
+      </div>
+      <div class="preview">
+        <div id="doc" class="doc" contenteditable="false" aria-label="Aperçu du contrat">
+          <p class="muted">Renseignez les champs à gauche puis cliquez sur <strong>Générer</strong>.</p>
+        </div>
+        <div class="print-footer">Stelneo — 13 rue Pierre Curie, 33800 Bordeaux — contact@stelneo.com — +33 6 68 35 55 06</div>
+      </div>
+    </main>
+  </div>
+
+  <template id="tpl-contract">
+    <div>
+      <h2 class="center">CONTRAT DE TEST D’UNE POCHETTE STELNEO</h2>
+      <div class="sep"></div>
+
+      <p><span class="caps">Entre les soussignés :</span><br>
+      <strong>Stelneo</strong>, micro‑entreprise dont le siège est situé au <strong>13 rue Pierre Curie, 33800 Bordeaux</strong>, représentée par <strong>[STELNEO_SIGN]</strong>, ci‑après « Stelneo ».</p>
+
+      <p><span class="caps">Et :</span><br>
+      [PARTY_BLOCK]
+      </p>
+
+      <div class="article"><h3>Objet</h3></div>
+      <p>Le présent contrat encadre la mise à disposition, à titre gratuit et temporaire, de <strong>[QTY]</strong> pochette(s) d’expédition réutilisable(s) (ci‑après « la Pochette »). L’essai est strictement limité à l’évaluation de la <strong>taille</strong>, du <strong>format</strong> et de la <strong>maniabilité</strong> de la Pochette.</p>
+
+      <div class="article"><h3>Durée et restitution</h3></div>
+      <p>Le Testeur s’engage à retourner la Pochette à Stelneo dans un délai maximum de <strong>[MONTHS]</strong> mois à compter de la remise, selon les modalités communiquées (Pochette pré-affranchie ou étiquette à imprimer).</p>
+
+      <div class="article"><h3>Restrictions d’usage</h3></div>
+      <ul>
+        <li>Interdiction d’utiliser la Pochette pour l’envoi réel de marchandises, ou dans tout flux logistique ou commercial.</li>
+        <li>Interdiction d’utiliser la Pochette à des fins de vente ou de prestation à des tiers.</li>
+        <li>Interdiction de reproduire la Pochette ou d’en extraire des informations techniques en vue d’un usage concurrent.</li>
+        <li>En cas de tests de résistance internes, Stelneo n’est pas responsable des dommages éventuels causés aux objets testés.</li>
+      </ul>
+
+      <div class="article"><h3>Retours d’information</h3></div>
+      <p>Les commentaires et retours du Testeur sont les bienvenus. Un formulaire de satisfaction sera envoyé par mail afin de recueillir son avis, il est invité à le remplir de la manière la plus compléte possible. Les informations communiquées (commentaires, mesures, photos, etc.) pourront être utilisées librement par Stelneo pour améliorer ses produits ou établir des statistiques de satisfaction, sans contrepartie financière ni droit de propriété intellectuelle pour le Testeur.</p>
+
+      <div class="article"><h3>Propriété et diligence</h3></div>
+      <p>La Pochette demeure la propriété de Stelneo. Le Testeur en assure la conservation avec diligence et informe Stelneo en cas de perte ou de détérioration.</p>
+
+      <div class="article"><h3>Loi applicable et juridiction</h3></div>
+      <p>Le présent contrat est régi par le droit français. Les parties s’engagent à rechercher une solution amiable à tout différend qui pourrait naître entre elles au sujet de la validité, de l’interprétation, de l’exécution, de la rupture de ce contrat. A défaut de parvenir à un accord, les parties soumettront leur litige au tribunal de commerce de Bordeaux.</p>
+
+      <div class="sep"></div>
+      <p><strong>Fait à</strong> [PLACE], <strong>le</strong> [DATE].</p>
+      <div class="sign-grid">
+        <div class="sign">
+          <p><strong>Pour Stelneo</strong><br>
+          [STELNEO_SIGN]</p>
+          [ESIGN_BLOCK]
+        </div>
+        <div>
+          <p><strong>Le Testeur</strong><br>
+          [TESTER_SIGN]<br>
+          <span class="small">Signature précédé de la mention lu et approuvé</span></p>
+        </div>
+      </div>
+
+      <div id="customBlock">[CUSTOM_CLAUSES]</div>
+    </div>
+  </template>
+
+  <script>
+    // --- Defaults ---
+    const DEFAULTS = {
+      stelneoSigner: "Léo-Paul BRIATTE" // par défaut
+    };
+
+    const el = (id)=>document.getElementById(id);
+    const proFields = el('proFields');
+    const persoFields = el('persoFields');
+    const badgeType = el('badgeType');
+    const badgeSigner = el('badgeSigner');
+
+    let contactType = null; // 'pro' | 'perso'
+    let signer = DEFAULTS.stelneoSigner;
+
+    // Radios contact type
+    document.querySelectorAll('[data-radio="contactType"]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        contactType = btn.dataset.value;
+        document.querySelectorAll('[data-radio="contactType"]').forEach(b=>b.classList.remove('accent'));
+        btn.classList.add('accent');
+        updateType(contactType);
+      })
+    })
+
+    function updateType(type){
+      badgeType.textContent = 'Type : ' + (type==='pro'?'Professionnel':'Particulier');
+      proFields.classList.toggle('hidden', type!=='pro');
+      persoFields.classList.toggle('hidden', type!=='perso');
+    }
+
+    // Radios signer
+    document.querySelectorAll('[data-radio="signer"]').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        signer = btn.dataset.value;
+        document.querySelectorAll('[data-radio="signer"]').forEach(b=>b.classList.remove('accent'));
+        btn.classList.add('accent');
+        badgeSigner.textContent = 'Signataire : ' + signer;
+      })
+    })
+
+    // Auto-sélection : pro & Léo-Paul par défaut
+    document.querySelector('[data-radio="contactType"][data-value="pro"]').click();
+    document.querySelector('[data-radio="signer"][data-value="Léo-Paul BRIATTE"]').click();
+
+    // Date du jour en FR
+    el('btnToday').addEventListener('click', ()=>{
+      const now = new Date();
+      const fmt = new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'});
+      el('date').value = fmt.format(now);
+    });
+
+    // --- Impression (PDF) : nom de fichier personnalisé ---
+    const ORIGINAL_TITLE = document.title;
+    function sanitizeFilename(s){
+      return String(s)
+        .replace(/[\/\\:*?"<>|]+/g,' ')
+        .replace(/\s+/g,' ')
+        .trim();
+    }
+    function buildFilename(clientName, dateLabel){
+      const c = (clientName && clientName.trim()) ? clientName.trim() : 'Client';
+      const d = (dateLabel && dateLabel.trim()) ? dateLabel.trim() : new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'}).format(new Date());
+      return sanitizeFilename(`contrat test echantillon entre Stelneo et ${c} - ${d}`);
+    }
+    function simpleHash(str){
+      let h = 0; for (let i=0;i<str.length;i++){ h = (h<<5) - h + str.charCodeAt(i); h|=0; }
+      return ('00000000' + (h>>>0).toString(16)).slice(-8);
+    }
+    function printWithFilename(){
+      const clientName = (contactType==='pro'
+        ? (el('proCompany').value || el('proName').value || 'Client')
+        : (el('persoName').value || 'Client'));
+      const dateLabel = el('date').value || new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'}).format(new Date());
+      document.title = buildFilename(clientName, dateLabel);
+      window.print();
+    }
+    window.addEventListener('afterprint', ()=>{ document.title = ORIGINAL_TITLE; });
+    el('btnPrint').addEventListener('click', printWithFilename);
+
+    // --- Génération du contrat ---
+    el('btnGenerate').addEventListener('click', ()=>{
+      const qty = el('qty').value || '1';
+      const months = el('months').value || '1';
+      const place = el('place').value || '[Ville]';
+      const date = el('date').value || '[Date]';
+      const custom = (el('customClauses').value||'').trim();
+
+      // Bloc partie : pro / perso
+      let partyBlock = '';
+      let testerSign = '';
+
+      if(contactType==='pro'){
+        const c = el('proCompany').value||'[Raison sociale]';
+        const s = el('proSiret').value?` (SIRET ${el('proSiret').value})`:'';
+        const n = el('proName').value||'[Nom & prénom]';
+        const r = el('proRole').value||'[Fonction]';
+        const a = el('proAddress').value||'';
+        partyBlock = `<strong>${c}</strong>${s}, représentée par ${n}, ${r}${a?`, située ${escapeHtml(a).replace(/\n/g, ', ')}`:''}, ci‑après « le Testeur ».`;
+        testerSign = `${n} — ${c}`;
+      } else if(contactType==='perso'){
+        const n = el('persoName').value||'[Nom & prénom]';
+        const a = el('persoAddress').value||'';
+        partyBlock = `<strong>${n}</strong>${a?`, demeurant ${escapeHtml(a).replace(/\n/g, ', ')}`:''}, ci‑après « le Testeur ».`;
+        testerSign = n;
+      } else {
+        partyBlock = '[Renseigner le type de contact]';
+        testerSign = '[Nom du Testeur]';
+      }
+
+      const tpl = el('tpl-contract').innerHTML;
+      let html = tpl
+        .replaceAll('[STELNEO_SIGN]', escapeHtml(signer))
+        .replace('[PARTY_BLOCK]', partyBlock)
+        .replace('[QTY]', qty)
+        .replace('[MONTHS]', months)
+        .replace('[PLACE]', escapeHtml(place))
+        .replace('[DATE]', escapeHtml(date))
+        .replace('[TESTER_SIGN]', escapeHtml(testerSign));
+
+      html = html.replace('[CUSTOM_CLAUSES]', custom?(`<h3>Clauses additionnelles</h3><p>${escapeHtml(custom).replace(/\n/g,'<br>')}</p>`):'');
+      // Bloc de signature électronique automatique (Stelneo)
+      const sigDate = (date !== '[Date]') ? date : new Intl.DateTimeFormat('fr-FR',{dateStyle:'long'}).format(new Date());
+      const esignId = simpleHash(signer + '|' + sigDate + '|' + qty);
+      const sigTime = new Intl.DateTimeFormat('fr-FR',{hour:'2-digit',minute:'2-digit'}).format(new Date());
+      const esignBlock = `<div class="esign"><svg viewBox="0 0 800 120" preserveAspectRatio="xMinYMid meet" xmlns="http://www.w3.org/2000/svg"><text x="10" y="85" font-size="64" font-family="cursive, 'Brush Script MT', 'Segoe Script', 'Comic Sans MS', serif">${escapeHtml(signer)}</text></svg><div class="esign-meta">Signé électroniquement par ${escapeHtml(signer)} le ${escapeHtml(sigDate)} à ${escapeHtml(sigTime)} · ID ${esignId}</div></div>`;
+      html = html.replace('[ESIGN_BLOCK]', esignBlock);
+
+      el('doc').innerHTML = html;
+      el('doc').setAttribute('contenteditable','true');
+      el('doc').focus();
+    });
+
+    // Copier (texte brut)
+    el('btnCopy').addEventListener('click', async ()=>{
+      const text = el('doc').innerText;
+      try{ await navigator.clipboard.writeText(text); toast('Contrat copié (texte).'); }
+      catch(e){ toast('Sélectionnez et copiez manuellement.'); }
+    });
+
+    // Brouillon localStorage
+    el('btnSave').addEventListener('click', ()=>{
+      const data = collectData();
+      localStorage.setItem('stelneo-contract-draft', JSON.stringify(data));
+      toast('Brouillon enregistré.');
+    });
+
+    el('btnLoad').addEventListener('click', ()=>{
+      const raw = localStorage.getItem('stelneo-contract-draft');
+      if(!raw) return toast('Aucun brouillon trouvé.');
+      const d = JSON.parse(raw);
+      applyData(d);
+      toast('Brouillon rechargé.');
+    });
+
+    function collectData(){
+      return {
+        contactType,
+        signer,
+        pro:{company:el('proCompany').value,siret:el('proSiret').value,name:el('proName').value,role:el('proRole').value,address:el('proAddress').value},
+        perso:{name:el('persoName').value,address:el('persoAddress').value},
+        meta:{place:el('place').value,date:el('date').value,qty:el('qty').value,months:el('months').value,custom:el('customClauses').value}
+      };
+    }
+
+    function applyData(d){
+      contactType = d.contactType || null; if(contactType){ updateType(contactType); document.querySelector(`[data-radio="contactType"][data-value="${contactType}"]`)?.classList.add('accent'); }
+      signer = d.signer || signer; if(signer){ document.querySelectorAll('[data-radio="signer"]').forEach(b=>{ if(b.dataset.value===signer){ b.classList.add('accent'); }}); badgeSigner.textContent = 'Signataire : ' + signer; }
+
+      el('proCompany').value = d.pro?.company||'';
+      el('proSiret').value = d.pro?.siret||'';
+      el('proName').value = d.pro?.name||'';
+      el('proRole').value = d.pro?.role||'';
+      el('proAddress').value = d.pro?.address||'';
+      el('persoName').value = d.perso?.name||'';
+      el('persoAddress').value = d.perso?.address||'';
+      el('place').value = d.meta?.place||'';
+      el('date').value = d.meta?.date||'';
+      el('qty').value = d.meta?.qty||'1';
+      el('months').value = d.meta?.months||'1';
+      el('customClauses').value = d.meta?.custom||'';
+    }
+
+    function escapeHtml(str){
+      return String(str)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+
+    function toast(msg){
+      const t = document.createElement('div');
+      t.textContent = msg; t.style.position='fixed'; t.style.bottom='16px'; t.style.right='16px'; t.style.background='#0a2a3a'; t.style.color='#fff'; t.style.padding='10px 12px'; t.style.borderRadius='12px'; t.style.boxShadow= 'var(--shadow)'; t.style.zIndex='99';
+      document.body.appendChild(t); setTimeout(()=>t.remove(), 2200);
+    }
+
+    // --- Tests de base (+ extra) ---
+    function runTests(){
+      const results = [];
+      const push = (name, ok, detail='')=>results.push({name, ok, detail});
+
+      // T1: sanitizeFilename retire les caractères interdits
+      const raw1 = 'ACME:Test/Name?*"<>|\\\\';
+      const out1 = sanitizeFilename(raw1);
+      const ok1 = !(/[\/\\:*?"<>|]/.test(out1));
+      push('T1 sanitizeFilename', ok1, `in: ${raw1} -> out: ${out1}`);
+
+      // T2: buildFilename compose un nom propre et contient client & date
+      const client2 = 'ACME / SAS:Test';
+      const date2 = '25 septembre 2025';
+      const out2 = buildFilename(client2, date2);
+      const ok2 = out2.includes('Stelneo et ACME') && out2.includes('25 septembre 2025') && !(/[\/\\:*?"<>|]/.test(out2));
+      push('T2 buildFilename', ok2, out2);
+
+      // T3: Remplacement des \n dans customClauses -> <br>
+      const sample = 'L1\nL2';
+      const replaced = escapeHtml(sample).replace(/\n/g,'<br>');
+      const ok3 = replaced === 'L1<br>L2';
+      push('T3 newline -> <br>', ok3, replaced);
+
+      // T4: simpleHash retourne 8 hex
+      const hash4 = simpleHash('test-case');
+      const ok4 = /^[0-9a-f]{8}$/.test(hash4);
+      push('T4 simpleHash length', ok4, hash4);
+
+      // T5: sanitizeFilename compresse les espaces
+      const out5 = sanitizeFilename('  a   b   ');
+      const ok5 = out5 === 'a b';
+      push('T5 sanitizeFilename trim/space', ok5, out5);
+
+      // T6: escapeHtml échappe les chevrons et &
+      const out6 = escapeHtml('<a & b>');
+      const ok6 = out6 === '&lt;a &amp; b&gt;';
+      push('T6 escapeHtml', ok6, out6);
+
+      // T7: buildFilename fallback client
+      const out7 = buildFilename('', '1 janvier 2025');
+      const ok7 = out7.includes('Stelneo et Client') && out7.includes('1 janvier 2025');
+      push('T7 buildFilename fallback', ok7, out7);
+
+      // T8: heure de signature au format HH:MM
+      const time8 = new Intl.DateTimeFormat('fr-FR',{hour:'2-digit',minute:'2-digit'}).format(new Date());
+      const ok8 = /\d{2}:\d{2}/.test(time8.replace(/\s/g,''));
+      push('T8 time format HH:MM', ok8, time8);
+
+      const out = document.getElementById('testsOut');
+      out.innerHTML = results.map(r=>`<div>${r.ok?'✅':'❌'} <strong>${r.name}</strong> — ${escapeHtml(r.detail)}</div>`).join('');
+    }
+    document.getElementById('btnTests').addEventListener('click', runTests);
+  </script>
+</body>
+</html>
